@@ -6,7 +6,8 @@ from jinja2 import TemplateNotFound
 from werkzeug.exceptions import abort
 
 from app import db, app, logging
-from .models import TradeDocMaster
+from app.mod.aml_src.process import Process
+from app.mod.models import TradeDocMaster
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ def index():
 @blueprint_aml.route("/network_files", methods=["GET"])
 def network_files():
     try:
-        folder_path = os.path.join(os.getcwd(), "shared")
+        folder_path = os.path.join(os.getcwd(), "shared", "input")
         files = os.listdir(folder_path)
         unique_ids = [str(uuid1().int) for _ in files]
 
@@ -38,6 +39,12 @@ def network_files():
 def show_extraction(unique_id):
     try:
         if unique_id:
+            result = TradeDocMaster.query.filter_by(unique_id=unique_id).first()
+            file_name = result.file_name
+
+            p = Process()
+            ocr_results = p.job(unique_id, file_name)
+
             return render_template("show_extraction.html", unique_id=unique_id)
     except TemplateNotFound:
         return abort(404)
